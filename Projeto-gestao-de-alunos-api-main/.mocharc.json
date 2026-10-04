@@ -1,0 +1,4 @@
+{
+  "file": ["test/helpers/hooks.js"],
+  "timeout": 15000
+}

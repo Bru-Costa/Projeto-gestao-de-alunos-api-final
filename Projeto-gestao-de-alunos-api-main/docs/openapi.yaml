@@ -1,0 +1,1009 @@
+openapi: 3.0.3
+info:
+  title: Gestão de Alunos API
+  description: >
+    API REST para gestão de alunos, disciplinas, notas e trabalhos, com persistência em MongoDB.
+
+    A API é organizada em dois grupos de rotas: **Admin**, usado por um administrador para
+    cadastrar alunos, disciplinas, matrículas e notas; e **Aluno**, usado pelo próprio aluno
+    para consultar suas disciplinas, suas notas e registrar trabalhos.
+
+
+    Toda a API (exceto o login) é protegida por autenticação via **JWT**. Faça login em
+    `POST /auth/login` com um e-mail e senha cadastrados, copie o `token` retornado e clique em
+    **Authorize** no topo desta página, informando `Bearer <token>`. O administrador já vem
+    pré-cadastrado no banco pelo seed (veja o README do projeto para as credenciais de
+    demonstração) — não existe endpoint de cadastro de administrador.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Servidor local (mesmo host da documentação)
+tags:
+  - name: Autenticação
+    description: Login de administrador e de aluno. Único grupo de rotas público.
+  - name: Alunos (Admin)
+    description: Cadastro e gestão de alunos. Restrito ao papel "admin".
+  - name: Disciplinas (Admin)
+    description: Cadastro de disciplinas e matrícula de alunos. Restrito ao papel "admin".
+  - name: Notas (Admin)
+    description: Lançamento e gestão de notas dos alunos. Restrito ao papel "admin".
+  - name: Trabalhos (Admin)
+    description: Consulta e correção de trabalhos entregues pelos alunos. Restrito ao papel "admin".
+  - name: Aluno (Autoatendimento)
+    description: >
+      Consultas e ações realizadas pelo próprio aluno. Acessível pelo aluno autenticado dono dos
+      dados (`alunoId` igual ao id do token) ou por um administrador.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      summary: Autentica um administrador ou aluno e retorna um token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Autenticação bem-sucedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/alunos:
+    get:
+      tags: [Alunos (Admin)]
+      summary: Lista todos os alunos cadastrados
+      responses:
+        '200':
+          description: Lista de alunos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Aluno'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Alunos (Admin)]
+      summary: Cadastra um novo aluno (define também a senha de acesso do aluno)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlunoInput'
+      responses:
+        '201':
+          description: Aluno criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aluno'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/alunos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AlunoId'
+    get:
+      tags: [Alunos (Admin)]
+      summary: Busca um aluno pelo id
+      responses:
+        '200':
+          description: Aluno encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aluno'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Alunos (Admin)]
+      summary: Atualiza os dados de um aluno (senha é opcional; se enviada, é redefinida)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlunoUpdate'
+      responses:
+        '200':
+          description: Aluno atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aluno'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Alunos (Admin)]
+      summary: Remove um aluno
+      responses:
+        '204':
+          description: Aluno removido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/disciplinas:
+    get:
+      tags: [Disciplinas (Admin)]
+      summary: Lista todas as disciplinas cadastradas
+      responses:
+        '200':
+          description: Lista de disciplinas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Disciplina'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Disciplinas (Admin)]
+      summary: Cadastra uma nova disciplina
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisciplinaInput'
+      responses:
+        '201':
+          description: Disciplina criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disciplina'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/disciplinas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/DisciplinaId'
+    get:
+      tags: [Disciplinas (Admin)]
+      summary: Busca uma disciplina pelo id
+      responses:
+        '200':
+          description: Disciplina encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disciplina'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Disciplinas (Admin)]
+      summary: Atualiza os dados de uma disciplina
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisciplinaInput'
+      responses:
+        '200':
+          description: Disciplina atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disciplina'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Disciplinas (Admin)]
+      summary: Remove uma disciplina
+      responses:
+        '204':
+          description: Disciplina removida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/disciplinas/{id}/matriculas:
+    parameters:
+      - $ref: '#/components/parameters/DisciplinaId'
+    post:
+      tags: [Disciplinas (Admin)]
+      summary: Matricula um aluno na disciplina
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatriculaInput'
+      responses:
+        '201':
+          description: Matrícula criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Matricula'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/disciplinas/{id}/alunos:
+    parameters:
+      - $ref: '#/components/parameters/DisciplinaId'
+    get:
+      tags: [Disciplinas (Admin)]
+      summary: Lista os alunos matriculados na disciplina
+      responses:
+        '200':
+          description: Lista de alunos matriculados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Aluno'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/notas:
+    get:
+      tags: [Notas (Admin)]
+      summary: Lista notas lançadas, com filtros opcionais
+      parameters:
+        - $ref: '#/components/parameters/AlunoIdQuery'
+        - $ref: '#/components/parameters/DisciplinaIdQuery'
+      responses:
+        '200':
+          description: Lista de notas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Nota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Notas (Admin)]
+      summary: Lança uma nota para um aluno em uma disciplina
+      description: O aluno precisa estar matriculado na disciplina informada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaInput'
+      responses:
+        '201':
+          description: Nota lançada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Nota'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /admin/notas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/NotaId'
+    get:
+      tags: [Notas (Admin)]
+      summary: Busca uma nota pelo id
+      responses:
+        '200':
+          description: Nota encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Nota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Notas (Admin)]
+      summary: Atualiza uma nota
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaUpdate'
+      responses:
+        '200':
+          description: Nota atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Nota'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Notas (Admin)]
+      summary: Remove uma nota
+      responses:
+        '204':
+          description: Nota removida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/trabalhos:
+    get:
+      tags: [Trabalhos (Admin)]
+      summary: Lista trabalhos entregues pelos alunos, com filtros opcionais
+      parameters:
+        - $ref: '#/components/parameters/AlunoIdQuery'
+        - $ref: '#/components/parameters/DisciplinaIdQuery'
+        - name: status
+          in: query
+          description: Filtra por status do trabalho
+          schema:
+            $ref: '#/components/schemas/TrabalhoStatus'
+      responses:
+        '200':
+          description: Lista de trabalhos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trabalho'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/trabalhos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/TrabalhoId'
+    get:
+      tags: [Trabalhos (Admin)]
+      summary: Busca um trabalho pelo id
+      responses:
+        '200':
+          description: Trabalho encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trabalho'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Trabalhos (Admin)]
+      summary: Corrige um trabalho (status, nota e feedback)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrabalhoCorrecao'
+      responses:
+        '200':
+          description: Trabalho atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trabalho'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Trabalhos (Admin)]
+      summary: Remove um trabalho
+      responses:
+        '204':
+          description: Trabalho removido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /alunos/{alunoId}/disciplinas:
+    parameters:
+      - $ref: '#/components/parameters/AlunoIdPath'
+    get:
+      tags: [Aluno (Autoatendimento)]
+      summary: Lista as disciplinas em que o aluno está matriculado
+      description: Acessível pelo próprio aluno (dono do `alunoId`) ou por um administrador.
+      responses:
+        '200':
+          description: Lista de disciplinas do aluno
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Disciplina'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /alunos/{alunoId}/notas:
+    parameters:
+      - $ref: '#/components/parameters/AlunoIdPath'
+    get:
+      tags: [Aluno (Autoatendimento)]
+      summary: Lista as notas do aluno, com filtro opcional por disciplina
+      description: Acessível pelo próprio aluno (dono do `alunoId`) ou por um administrador.
+      parameters:
+        - $ref: '#/components/parameters/DisciplinaIdQuery'
+      responses:
+        '200':
+          description: Lista de notas do aluno
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Nota'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /alunos/{alunoId}/trabalhos:
+    parameters:
+      - $ref: '#/components/parameters/AlunoIdPath'
+    get:
+      tags: [Aluno (Autoatendimento)]
+      summary: Lista os trabalhos registrados pelo aluno
+      description: Acessível pelo próprio aluno (dono do `alunoId`) ou por um administrador.
+      responses:
+        '200':
+          description: Lista de trabalhos do aluno
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trabalho'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Aluno (Autoatendimento)]
+      summary: Registra um novo trabalho para uma disciplina em que o aluno está matriculado
+      description: Acessível pelo próprio aluno (dono do `alunoId`) ou por um administrador.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrabalhoInput'
+      responses:
+        '201':
+          description: Trabalho registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trabalho'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Token obtido em `POST /auth/login`. Envie no cabeçalho `Authorization: Bearer <token>`.
+
+  parameters:
+    AlunoId:
+      name: id
+      in: path
+      required: true
+      description: Id do aluno
+      schema:
+        type: string
+      example: aluno-ana-souza
+    AlunoIdPath:
+      name: alunoId
+      in: path
+      required: true
+      description: Id do aluno
+      schema:
+        type: string
+      example: aluno-ana-souza
+    AlunoIdQuery:
+      name: alunoId
+      in: query
+      required: false
+      description: Filtra pelo id do aluno
+      schema:
+        type: string
+      example: aluno-ana-souza
+    DisciplinaId:
+      name: id
+      in: path
+      required: true
+      description: Id da disciplina
+      schema:
+        type: string
+      example: disciplina-matematica
+    DisciplinaIdQuery:
+      name: disciplinaId
+      in: query
+      required: false
+      description: Filtra pelo id da disciplina
+      schema:
+        type: string
+      example: disciplina-matematica
+    NotaId:
+      name: id
+      in: path
+      required: true
+      description: Id da nota
+      schema:
+        type: string
+      example: nota-ana-matematica-prova1
+    TrabalhoId:
+      name: id
+      in: path
+      required: true
+      description: Id do trabalho
+      schema:
+        type: string
+      example: trabalho-ana-lista-exercicios-1
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    Unauthorized:
+      description: Token ausente, inválido ou expirado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    Forbidden:
+      description: Usuário autenticado, mas sem permissão para este recurso
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    Conflict:
+      description: Conflito com o estado atual do recurso
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+
+  schemas:
+    Erro:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Mensagem descrevendo o erro.
+
+    LoginInput:
+      type: object
+      required: [email, senha]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@escola.com
+        senha:
+          type: string
+          format: password
+          example: admin123
+
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+          example: admin-principal
+        nome:
+          type: string
+          example: Administrador do Sistema
+        email:
+          type: string
+          format: email
+          example: admin@escola.com
+        role:
+          type: string
+          enum: [admin, aluno]
+          example: admin
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+
+    Aluno:
+      type: object
+      description: A senha nunca é retornada pela API.
+      properties:
+        id:
+          type: string
+          example: aluno-ana-souza
+        nome:
+          type: string
+          example: Ana Souza
+        email:
+          type: string
+          format: email
+          example: ana.souza@example.com
+        matricula:
+          type: string
+          example: '2024001'
+        role:
+          type: string
+          example: aluno
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AlunoInput:
+      type: object
+      required: [nome, email, matricula, senha]
+      properties:
+        nome:
+          type: string
+          example: Ana Souza
+        email:
+          type: string
+          format: email
+          example: ana.souza@example.com
+        matricula:
+          type: string
+          example: '2024001'
+        senha:
+          type: string
+          format: password
+          description: Senha de acesso do aluno, definida pelo administrador no cadastro.
+          example: '123456'
+
+    AlunoUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+          example: Ana Souza
+        email:
+          type: string
+          format: email
+          example: ana.souza@example.com
+        matricula:
+          type: string
+          example: '2024001'
+        senha:
+          type: string
+          format: password
+          description: Se informada, redefine a senha de acesso do aluno.
+          example: novaSenha123
+
+    Disciplina:
+      type: object
+      properties:
+        id:
+          type: string
+          example: disciplina-matematica
+        nome:
+          type: string
+          example: Matemática
+        codigo:
+          type: string
+          example: MAT101
+        cargaHoraria:
+          type: integer
+          nullable: true
+          example: 60
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DisciplinaInput:
+      type: object
+      required: [nome, codigo]
+      properties:
+        nome:
+          type: string
+          example: Matemática
+        codigo:
+          type: string
+          example: MAT101
+        cargaHoraria:
+          type: integer
+          example: 60
+
+    Matricula:
+      type: object
+      properties:
+        id:
+          type: string
+          example: matricula-ana-matematica
+        alunoId:
+          type: string
+          example: aluno-ana-souza
+        disciplinaId:
+          type: string
+          example: disciplina-matematica
+        dataMatricula:
+          type: string
+          format: date-time
+
+    MatriculaInput:
+      type: object
+      required: [alunoId]
+      properties:
+        alunoId:
+          type: string
+          example: aluno-ana-souza
+
+    Nota:
+      type: object
+      properties:
+        id:
+          type: string
+          example: nota-ana-matematica-prova1
+        alunoId:
+          type: string
+          example: aluno-ana-souza
+        disciplinaId:
+          type: string
+          example: disciplina-matematica
+        valor:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+          example: 8.5
+        tipo:
+          $ref: '#/components/schemas/NotaTipo'
+        descricao:
+          type: string
+          nullable: true
+          example: Prova 1 - Álgebra
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    NotaTipo:
+      type: string
+      enum: [prova, trabalho, participacao]
+
+    NotaInput:
+      type: object
+      required: [alunoId, disciplinaId, valor, tipo]
+      properties:
+        alunoId:
+          type: string
+          example: aluno-ana-souza
+        disciplinaId:
+          type: string
+          example: disciplina-matematica
+        valor:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+          example: 8.5
+        tipo:
+          $ref: '#/components/schemas/NotaTipo'
+        descricao:
+          type: string
+          example: Prova 1 - Álgebra
+
+    NotaUpdate:
+      type: object
+      properties:
+        valor:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+          example: 9.0
+        tipo:
+          $ref: '#/components/schemas/NotaTipo'
+        descricao:
+          type: string
+          example: Prova 1 - Álgebra (revisada)
+
+    TrabalhoStatus:
+      type: string
+      enum: [entregue, em_correcao, corrigido]
+
+    Trabalho:
+      type: object
+      properties:
+        id:
+          type: string
+          example: trabalho-ana-lista-exercicios-1
+        alunoId:
+          type: string
+          example: aluno-ana-souza
+        disciplinaId:
+          type: string
+          example: disciplina-matematica
+        titulo:
+          type: string
+          example: Lista de Exercícios 1
+        descricao:
+          type: string
+          nullable: true
+          example: Resolução dos exercícios de 1 a 20 do capítulo 2.
+        status:
+          $ref: '#/components/schemas/TrabalhoStatus'
+        nota:
+          type: number
+          format: float
+          nullable: true
+          example: 8.0
+        feedback:
+          type: string
+          nullable: true
+          example: Bom trabalho, faltou aprofundar o impacto social.
+        dataEntrega:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TrabalhoInput:
+      type: object
+      required: [disciplinaId, titulo]
+      properties:
+        disciplinaId:
+          type: string
+          example: disciplina-matematica
+        titulo:
+          type: string
+          example: Lista de Exercícios 2
+        descricao:
+          type: string
+          example: Resolução dos exercícios de 21 a 40 do capítulo 2.
+
+    TrabalhoCorrecao:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/TrabalhoStatus'
+        nota:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+          example: 9.0
+        feedback:
+          type: string
+          example: Excelente trabalho!

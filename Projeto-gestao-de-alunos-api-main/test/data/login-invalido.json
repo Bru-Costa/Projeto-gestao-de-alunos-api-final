@@ -1,0 +1,29 @@
+[
+  {
+    "descricao": "admin com senha incorreta",
+    "perfil": "admin",
+    "senha": "senha-incorreta",
+    "esperado": { "status": 401, "erro": "E-mail ou senha inválidos." }
+  },
+  {
+    "descricao": "aluno com senha incorreta",
+    "perfil": "aluno",
+    "email": "ana.souza@example.com",
+    "senha": "senha-incorreta",
+    "esperado": { "status": 401, "erro": "E-mail ou senha inválidos." }
+  },
+  {
+    "descricao": "e-mail que não existe",
+    "perfil": "aluno",
+    "email": "nao.existe@example.com",
+    "senha": "123456",
+    "esperado": { "status": 401, "erro": "E-mail ou senha inválidos." }
+  },
+  {
+    "descricao": "login sem informar a senha",
+    "perfil": "aluno",
+    "email": "ana.souza@example.com",
+    "senha": "",
+    "esperado": { "status": 400, "erro": "Os campos \"email\" e \"senha\" são obrigatórios." }
+  }
+]
